@@ -1,7 +1,6 @@
 import yfinance as yf
 import pandas as pd
 import ollama
-import streamlit as st
 
 # ==============================
 # FUNCTION 1: GET STOCK DATA
@@ -30,21 +29,41 @@ def show_stock_details(info):
 def analyze_with_ai(info):
 
     prompt = f"""
-    Analyze this company:
+    Analyze this stock like a professional investor:
 
     Name: {info.get('longName')}
-    PE: {info.get('trailingPE')}
-    ROE: {info.get('returnOnEquity')}
-    Growth: {info.get('revenueGrowth')}
-    PriceToBook: {info.get('priceToBook')}
-    Eps: {info.get('trailingEps')}
-    CurrentPrice: {info.get('currentPrice')}
-    trailingPegRatio: {info.get('trailingPegRatio')}
-    
-    
-    
+    Sector: {info.get('sector')}
 
-    Give investment insights.
+    --- Growth ---
+    Revenue Growth: {info.get('revenueGrowth')}
+    Earnings Growth: {info.get('earningsGrowth')}
+
+    --- Profitability ---
+    ROE: {info.get('returnOnEquity')}
+    ROA: {info.get('returnOnAssets')}
+    Profit Margin: {info.get('profitMargins')}
+
+    --- Valuation ---
+    PE: {info.get('trailingPE')}
+    Forward PE: {info.get('forwardPE')}
+    PEG: {info.get('trailingPegRatio')}
+    Price to Book: {info.get('priceToBook')}
+
+    --- Financial Health ---
+    Debt to Equity: {info.get('debtToEquity')}
+    Current Ratio: {info.get('currentRatio')}
+    Free Cash Flow: {info.get('freeCashflow')}
+
+    --- Market ---
+    Current Price: {info.get('currentPrice')}
+    52 Week High: {info.get('fiftyTwoWeekHigh')}
+    52 Week Low: {info.get('fiftyTwoWeekLow')}
+
+    Give:
+    1. Strengths
+    2. Weaknesses
+    3. Valuation opinion
+    4. Long-term investment view
     """
 
     response = ollama.chat(
@@ -54,38 +73,6 @@ def analyze_with_ai(info):
 
     print("\n🤖 AI Analysis:\n")
     print(response['message']['content'])
-    
-    
-def chat_with_ai():
-    st.title("📈 AI Stock Analyst")
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    # Display chat history
-    for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
-
-    # User input
-    while True:
-        user_input = st.chat_input("Ask about stocks...")       
-
-        if user_input:
-            
-            if user_input.lower() == "exit":
-                break
-            
-            st.session_state.messages.append({"role": "user", "content": user_input})
-            st.chat_message("user").write(user_input)
-
-            response = ollama.chat(
-                model="mistral",
-                messages=st.session_state.messages
-            )
-
-            ai_reply = response["message"]["content"]
-
-            st.session_state.messages.append({"role": "assistant", "content": ai_reply})
-            st.chat_message("assistant").write(ai_reply)
 
 
 # ==============================
@@ -108,8 +95,5 @@ def main():
     analyze_with_ai(info)
     
     
-# if __name__ == '__main__':
-#     while True:
-#         main()
-
-chat_with_ai()
+while True:
+    main()
