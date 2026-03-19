@@ -27,6 +27,8 @@ def build_context(info):
     Debt/Equity: {info.get('debtToEquity')}
     Price: {info.get('currentPrice')}
 
+    raw data (): {info}
+
     Answer all questions ONLY based on this company.
     """
 
