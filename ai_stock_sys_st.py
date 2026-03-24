@@ -1,6 +1,15 @@
 import yfinance as yf
 import ollama
 import streamlit as st
+from ollama import Client
+
+# ==============================
+# OLLAMA CLIENT (REMOTE)
+# ==============================
+ollama_client = Client(
+    host="http://ollama-api.lxa.com", auth=("jackson", "123")  # basic auth
+)
+
 
 # ==============================
 # GET STOCK DATA
@@ -59,9 +68,7 @@ if ticker:
 
     # Store chat history
     if "messages" not in st.session_state:
-        st.session_state.messages = [
-            {"role": "system", "content": context}
-        ]
+        st.session_state.messages = [{"role": "system", "content": context}]
 
     # Show previous chat
     for msg in st.session_state.messages[1:]:
@@ -72,22 +79,17 @@ if ticker:
 
     if user_input:
         # Save user message
-        st.session_state.messages.append(
-            {"role": "user", "content": user_input}
-        )
+        st.session_state.messages.append({"role": "user", "content": user_input})
 
         st.chat_message("user").write(user_input)
 
         # AI response
-        response = ollama.chat(
-            model="mistral",
-            messages=st.session_state.messages
+        response = ollama_client.chat(
+            model="martain7r/finance-llama-8b:fp16", messages=st.session_state.messages
         )
 
         ai_reply = response["message"]["content"]
 
-        st.session_state.messages.append(
-            {"role": "assistant", "content": ai_reply}
-        )
+        st.session_state.messages.append({"role": "assistant", "content": ai_reply})
 
         st.chat_message("assistant").write(ai_reply)
