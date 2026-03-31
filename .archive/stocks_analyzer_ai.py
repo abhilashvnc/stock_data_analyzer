@@ -3,23 +3,6 @@ import streamlit as st
 import google.generativeai as genai
 from groq import Groq
 from ollama import Client
-
-# ==============================
-# CLIENTS
-# ==============================
-ollama_client = Client(
-    host="http://ollama-api.lxa.com", auth=("jackson", "123")
-)
-
-# Add your keys here or via st.secrets / env vars
-GEMINI_API_KEY = "YOUR_GEMINI_KEY" # at https://aistudio.google.com/app/api-keys
-GROQ_API_KEY = "YOUR_GROQ_KEY"
-
-import yfinance as yf
-import streamlit as st
-import google.generativeai as genai
-from groq import Groq
-from ollama import Client
 import streamlit.components.v1 as components
 import json
 
