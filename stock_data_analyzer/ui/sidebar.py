@@ -216,25 +216,20 @@ def _render_data_source_selector() -> None:
     for name in source_names:
         is_on = name in active
 
-        # If this is the last active source, disable its toggle
-        # so the user cannot turn it off
-        is_last_active = is_on and len(active) == 1
         toggled = st.sidebar.toggle(
             name,
             value=is_on,
             key=f"ds_toggle_{name}",
-            disabled=is_last_active,
-            help=(
-                "At least one data source must remain active."
-                if is_last_active
-                else None
-            ),
         )
+
         if toggled:
             new_active.add(name)
 
-    # Safety net — should never be empty due to disabled toggle, but guard anyway
+    # ==============================
+    # ENFORCE AT LEAST ONE ACTIVE
+    # ==============================
     if not new_active:
+        st.sidebar.warning("At least one data source must remain active ⚠️")
         new_active = {source_names[0]}
 
     st.session_state.active_data_sources = new_active
