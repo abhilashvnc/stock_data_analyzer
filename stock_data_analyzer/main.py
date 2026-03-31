@@ -1,5 +1,5 @@
 import streamlit as st
-from session import init_session, get_active_provider, get_active_data_source
+from session import init_session, get_active_provider, get_active_data_sources
 from ui.storage import localstorage_load_component, restore_from_query_params
 from ui.sidebar import render_sidebar
 from ui.chat import render_chat
@@ -21,5 +21,4 @@ provider = get_active_provider()
 if not provider.is_authenticated:
     st.info("👈 Connect to a provider in the sidebar to get started.")
     st.stop()
-
-render_chat(provider, get_active_data_source())
+render_chat(provider, get_active_data_sources())

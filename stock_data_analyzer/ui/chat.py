@@ -1,13 +1,9 @@
 import streamlit as st
 from providers.base import BaseProvider
 from data.base import BaseDataSource, StockContext
-import hashlib
 
 
-# ==============================
-# MAIN ENTRY
-# ==============================
-def render_chat(provider: BaseProvider, data_source: BaseDataSource) -> None:
+def render_chat(provider: BaseProvider, data_sources: list[BaseDataSource]) -> None:
     sess = st.session_state.provider_sessions[st.session_state.active_provider]
     selected_model = sess.get("selected_model")
 
@@ -21,26 +17,35 @@ def render_chat(provider: BaseProvider, data_source: BaseDataSource) -> None:
 
     ticker = _normalise_ticker(ticker_input)
 
-    # Cache key based on ticker + data source only — not provider or model
-    fetch_key = f"{ticker}__{data_source.source_name}"
-
-    # Only fetch when ticker or data source changes
-    if st.session_state.get("fetch_key") != fetch_key:
+    # Reset only on ticker change — data source changes do NOT reset chat
+    if st.session_state.get("fetch_key") != ticker:
         with st.spinner("Fetching stock data..."):
-            fetch_result = data_source.fetch(ticker)
+            ctx = _fetch_and_merge(ticker, data_sources)
 
-        if not fetch_result.success or fetch_result.context is None:
-            st.error(f"❌ {fetch_result.error}")
+        if ctx is None:
             return
 
-        st.session_state.fetch_key = fetch_key
-        st.session_state.stock_ctx = fetch_result.context
-        st.session_state.system_prompt = data_source.build_prompt(fetch_result.context)
-
-        # New ticker = new chat
+        st.session_state.fetch_key = ticker
+        st.session_state.stock_ctx = ctx
+        # System prompt is rebuilt from whichever source is primary (first in list)
+        st.session_state.system_prompt = data_sources[0].build_prompt(ctx)
         st.session_state.messages = [
             {"role": "system", "content": st.session_state.system_prompt}
         ]
+
+    else:
+        # Ticker unchanged — check if active data sources changed
+        # If so, silently update the system prompt without clearing chat history
+        ctx = st.session_state.stock_ctx
+        if ctx is not None:
+            new_prompt = data_sources[0].build_prompt(
+                _fetch_and_merge(ticker, data_sources) or ctx
+            )
+            if new_prompt != st.session_state.system_prompt:
+                st.session_state.system_prompt = new_prompt
+                # Update system message in history without wiping chat
+                if st.session_state.messages:
+                    st.session_state.messages[0]["content"] = new_prompt
 
     ctx = st.session_state.get("stock_ctx")
     if ctx is None:
@@ -52,7 +57,6 @@ def render_chat(provider: BaseProvider, data_source: BaseDataSource) -> None:
         st.warning("⚠️ No model selected. Refresh the model list in the sidebar.")
         return
 
-    # Changing provider or model does NOT reset chat anymore
     _render_messages()
     _handle_input(provider, selected_model)
 
@@ -60,6 +64,32 @@ def render_chat(provider: BaseProvider, data_source: BaseDataSource) -> None:
 # ==============================
 # HELPERS
 # ==============================
+def _fetch_and_merge(
+    ticker: str,
+    data_sources: list[BaseDataSource],
+) -> StockContext | None:
+    """Fetch from all active sources and merge into one context."""
+    contexts = []
+    errors = []
+
+    for source in data_sources:
+        result = source.fetch(ticker)
+        if result.success and result.context:
+            contexts.append(result.context)
+        else:
+            errors.append(f"{source.source_name}: {result.error}")
+
+    if not contexts:
+        st.error("❌ All data sources failed:\n" + "\n".join(errors))
+        return None
+
+    if errors:
+        # Partial failure — warn but continue with what we have
+        st.warning("⚠️ Some sources failed:\n" + "\n".join(errors))
+
+    return StockContext.merge(contexts)
+
+
 def _normalise_ticker(raw: str) -> str:
     ticker = raw.upper().strip()
     if not ticker.endswith(".NS"):
@@ -72,7 +102,7 @@ def _render_metrics(ctx: StockContext) -> None:
     col1.metric("Price", f"₹{ctx.current_price or 'N/A'}")
     col2.metric("52W High", f"₹{ctx.week_52_high  or 'N/A'}")
     col3.metric("52W Low", f"₹{ctx.week_52_low   or 'N/A'}")
-    st.success(f"**{ctx.long_name}** | {ctx.sector}")
+    st.success(f"**{ctx.long_name}** | {ctx.sector} | *via {ctx.source}*")
 
 
 def _render_messages() -> None:

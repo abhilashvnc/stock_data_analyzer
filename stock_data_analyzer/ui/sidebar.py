@@ -198,17 +198,43 @@ def _handle_logout(provider_name: str) -> None:
 # DATA SOURCE SELECTOR
 # ==============================
 def _render_data_source_selector() -> None:
+    from data import DATA_SOURCE_REGISTRY
+
     source_names = list(DATA_SOURCE_REGISTRY.keys())
 
+    # Nothing to configure if only one source exists
     if len(source_names) == 1:
-        # No point showing a selector for one option
         st.sidebar.caption(f"📊 Data: {source_names[0]}")
-        st.session_state.active_data_source = source_names[0]
+        st.session_state.active_data_sources = {source_names[0]}
         return
 
-    chosen = st.sidebar.selectbox(
-        "Data Source",
-        source_names,
-        key="data_source_select",
-    )
-    st.session_state.active_data_source = chosen
+    st.sidebar.markdown("**📊 Data Sources**")
+
+    active: set = st.session_state.active_data_sources
+    new_active: set = set()
+
+    for name in source_names:
+        is_on = name in active
+
+        # If this is the last active source, disable its toggle
+        # so the user cannot turn it off
+        is_last_active = is_on and len(active) == 1
+        toggled = st.sidebar.toggle(
+            name,
+            value=is_on,
+            key=f"ds_toggle_{name}",
+            disabled=is_last_active,
+            help=(
+                "At least one data source must remain active."
+                if is_last_active
+                else None
+            ),
+        )
+        if toggled:
+            new_active.add(name)
+
+    # Safety net — should never be empty due to disabled toggle, but guard anyway
+    if not new_active:
+        new_active = {source_names[0]}
+
+    st.session_state.active_data_sources = new_active
